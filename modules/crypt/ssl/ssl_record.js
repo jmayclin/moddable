@@ -2,22 +2,22 @@
  * Copyright (c) 2016-2022  Moddable Tech, Inc.
  *
  *   This file is part of the Moddable SDK Runtime.
- * 
+ *
  *   The Moddable SDK Runtime is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU Lesser General Public License as published by
  *   the Free Software Foundation, either version 3 of the License, or
  *   (at your option) any later version.
- * 
+ *
  *   The Moddable SDK Runtime is distributed in the hope that it will be useful,
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *   GNU Lesser General Public License for more details.
- * 
+ *
  *   You should have received a copy of the GNU Lesser General Public License
  *   along with the Moddable SDK Runtime.  If not, see <http://www.gnu.org/licenses/>.
  *
- * This file incorporates work covered by the following copyright and  
- * permission notice:  
+ * This file incorporates work covered by the following copyright and
+ * permission notice:
  *
  *       Copyright (C) 2010-2016 Marvell International Ltd.
  *       Copyright (C) 2002-2010 Kinoma, Inc.
@@ -193,20 +193,32 @@ const recordProtocol = {
 					stream.writeChunk(fragment);
 					stream.writeChunk(mac);
 					if (blksz) {
-						let length = stream.bytesWritten + 1;
-						let padSize = length % blksz;
+						let length = stream.bytesWritten + 1; // pretend i've written 16 bytes, length = 17
+						let padSize = length % blksz; // 17 % 16 = 1
 						if (padSize > 0)
-							padSize = blksz - padSize;
-						for (let i = 0; i < padSize; i++)
+							padSize = blksz - padSize; // padSize = -15?
+						for (let i = 0; i < padSize; i++) // looks like moderately funky PKCS7 padding
 							stream.writeChar(padSize);
 						stream.writeChar(padSize);
 					}
+                    // our protocol version if 0x0303, so this should execute
 					if (session.protocolVersion >= 0x302 && blksz) { // 3.2 or higher && block cipher
 						iv = RNG.get(blksz);
 						cipher.enc.setIV(iv);
 					}
+                    // my hypothesis is that this goes very wrong.
+                    // what is the actual data that we are trying to encrypt?
+                    // I suspect that this is real, valid data
+                    // let chunk = stream.getChunk()
+                    // log(chunk)
 					fragment = cipher.enc.encrypt(stream.getChunk());
+                    // I suspect that this is all zeros, when it shouldn't be
+                    // even if the initial data is all zeros, this should be random
+                    // data.
+                    // log(fragment)
 					if (iv)
+                        // I think this is what provides the first 16 bytes of random
+                        // data in the "mostly zero" TLS record we receive
 						fragment = iv.concat(fragment);
 					}
 					break;
